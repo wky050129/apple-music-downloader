@@ -54,23 +54,53 @@ amdl 会继承 Claude Code 环境里的 `HTTPS_PROXY`。音频走代理可能非
 
 ## 安装
 
-1. 克隆本仓库，把 `amdl.exe` 放在仓库根目录。可以用 Go 编译（`go build -o amdl.exe .`，见主
-   [README](../README-CN.md#开发者指南)），也可以从上游的 [Releases](https://github.com/zhaarey/apple-music-downloader/releases/latest)
-   下载 Windows 版。用 `config.yaml.example` 生成 `config.yaml`，保持 `lite-server: "http://127.0.0.1:12340"`。
-2. 用 `mcp/wrapper-lite/compose.yaml` 给 wrapper-lite 登录一次，步骤写在该文件开头，需要 Apple ID 密码和双重认证验证码。登录时把
-   `mcp/wrapper-lite/.env.example` 复制成 `.env` 并填好，登录完把密码清掉。登录状态会保存在 Docker 卷里。
-3. 安装并注册服务器：
+不管用哪种方式，都要先给 wrapper-lite 登录一次。用 `mcp/wrapper-lite/compose.yaml`，步骤写在该文件开头，需要 Apple ID 密码和双重认证
+验证码。登录时把 `mcp/wrapper-lite/.env.example` 复制成 `.env` 并填好，登录完把密码清掉。登录状态会保存在 Docker 卷里。
+
+本 fork 的 [Releases](https://github.com/wky050129/apple-music-downloader/releases/latest) 和 Docker 镜像跟随上游：有个工作流每天合并一次上游，
+上游每出一个版本，这里就会发布同一版本号、加上 MCP 的版本。
+
+### 从 Release 安装（Windows）
+
+1. 在最新的 Release 里下载 `amdl_windows_amd64_mcp.zip` 并解压，会得到 `amdl\amdl.exe`、`amdl\config.yaml.example` 和 `amdl\mcp\`。
+   把 `config.yaml.example` 复制成 `config.yaml`，里面已经是 `lite-server: "http://127.0.0.1:12340"`。其他平台：把 `amdl_mcp.zip`
+   解压到 amdl 程序旁边，再设置 `AMDL_EXE`。
+2. 安装并注册服务器：
 
 ```powershell
-git clone https://github.com/wky050129/apple-music-downloader; cd apple-music-downloader\mcp
+cd amdl\mcp
 uv sync                                   # 创建 .venv，装好 MCP SDK（mcp 2.x）和 mutagen
 claude mcp add amdl -s user -- $PWD\.venv\Scripts\python.exe $PWD\server.py
 claude mcp list                           # 显示 amdl: ... ✔ Connected 即成功
 ```
 
+### 从源码安装
+
+克隆本仓库，把 `amdl.exe` 放在仓库根目录：可以用 Go 编译（`go build -o amdl.exe .`，见主 [README](../README-CN.md#开发者指南)），
+也可以从 Release 里拿。用 `config.yaml.example` 生成 `config.yaml`，然后在 `apple-music-downloader\mcp` 里执行上面的命令。
+
+### Docker 镜像
+
+`ghcr.io/wky050129/apple-music-downloader` 里同时有 amdl 和 MCP 服务器，用 `mcp` 命令以 stdio 方式启动服务器。amdl 的 `config.yaml`
+（第一次使用时自动生成）、下载的文件和 MCP 的任务记录都在 `/data` 里：
+
+```powershell
+claude mcp add amdl -s user -- docker run -i --rm -v C:\amdl-data:/data `
+  -e AMDL_LITE_SERVER=http://host.docker.internal:12340 --add-host host.docker.internal:host-gateway `
+  ghcr.io/wky050129/apple-music-downloader:latest mcp
+```
+
+- 也可以用本仓库的 `compose.yaml`，它已经设好了同样的变量：
+  `claude mcp add amdl -s user -- docker compose -f <仓库路径>\compose.yaml run --rm -T amdl mcp`。
+- 如果 wrapper-lite 是用 `mcp/wrapper-lite/compose.yaml` 启动的，容器也可以直接加入它的网络：
+  `--network wrapper-lite_default -e AMDL_LITE_SERVER=http://wrapper-lite:12340`。
+- 在容器里不能用 `wrapper_start`，请在宿主机上启动 wrapper-lite。
+- `foobar_library` 读取挂载到 `/foobar` 的 foobar2000 配置目录和挂载到 `/music` 的音乐文件夹。
+
 ## 配置
 
-用环境变量配置（`claude mcp add ... -e 名称=值`），默认值已经按本仓库的目录结构设好：
+用环境变量配置（`claude mcp add ... -e 名称=值`）。默认值已经按本仓库和 Release 压缩包的目录结构设好；Docker 镜像有自己的默认值：
+`/data`、`/foobar` 和 `/music`。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
@@ -84,6 +114,7 @@ claude mcp list                           # 显示 amdl: ... ✔ Connected 即�
 | `AMDL_MCP_STATE` | `mcp\state\` | 任务日志、隔离区、缓存的网页 token |
 | `AMDL_DIRECT_HOSTS` | `aod.itunes.apple.com,mzstatic.com` | amdl 不走代理直连的域名 |
 | `AMDL_AUTO_RETRY` | `2` | 失败、截断或缺失曲目的额外重试次数 |
+| `AMDL_LITE_SERVER` | 不设置 | wrapper-lite 地址，会覆盖 `config.yaml` 里的 `lite-server`（Docker 镜像中使用） |
 
 ## wrapper-lite 登录
 

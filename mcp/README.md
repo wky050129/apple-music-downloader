@@ -58,25 +58,57 @@ Apple API calls still use the proxy. Change or disable this with `AMDL_DIRECT_HO
 
 ## Setup
 
-1. Clone this repository and put `amdl.exe` in its root: build it with Go (`go build -o amdl.exe .`, see the main
-   [README](../README.md#for-developers)) or download the Windows binary from the upstream
-   [releases](https://github.com/zhaarey/apple-music-downloader/releases/latest). Create `config.yaml` from
-   `config.yaml.example` and keep `lite-server: "http://127.0.0.1:12340"`.
-2. Log wrapper-lite in once, with `mcp/wrapper-lite/compose.yaml` (the steps are at the top of that file; you need
-   the Apple ID password and a 2FA code). Copy `mcp/wrapper-lite/.env.example` to `.env` for the login and clear the
-   password afterwards. The login is cached in a Docker volume.
-3. Install and register the server:
+Every setup needs wrapper-lite logged in once. Use `mcp/wrapper-lite/compose.yaml`; the steps are at the top of
+that file, and you need the Apple ID password and a 2FA code. Copy `mcp/wrapper-lite/.env.example` to `.env` for
+the login and clear the password afterwards. The login is cached in a Docker volume.
+
+This fork's [Releases](https://github.com/wky050129/apple-music-downloader/releases/latest) and Docker image follow
+upstream: a workflow merges upstream once a day, and every upstream version is released again here with the MCP
+server added.
+
+### From a release (Windows)
+
+1. Download `amdl_windows_amd64_mcp.zip` from the latest release and unpack it. You get `amdl\amdl.exe`,
+   `amdl\config.yaml.example` and `amdl\mcp\`. Copy `config.yaml.example` to `config.yaml`; it already has
+   `lite-server: "http://127.0.0.1:12340"`. Other platforms: unpack `amdl_mcp.zip` next to your amdl binary and set
+   `AMDL_EXE`.
+2. Install and register the server:
 
 ```powershell
-git clone https://github.com/wky050129/apple-music-downloader; cd apple-music-downloader\mcp
+cd amdl\mcp
 uv sync                                   # creates .venv with the MCP SDK (mcp 2.x) and mutagen
 claude mcp add amdl -s user -- $PWD\.venv\Scripts\python.exe $PWD\server.py
 claude mcp list                           # amdl: ... ✔ Connected
 ```
 
+### From source
+
+Clone this repository and put `amdl.exe` in its root: build it with Go (`go build -o amdl.exe .`, see the main
+[README](../README.md#for-developers)) or take it from a release. Create `config.yaml` from `config.yaml.example`,
+then run the commands above in `apple-music-downloader\mcp`.
+
+### Docker image
+
+`ghcr.io/wky050129/apple-music-downloader` contains amdl and the MCP server. The `mcp` command runs the server over
+stdio. amdl's `config.yaml` (created on first use), the downloads and the MCP's job state are in `/data`:
+
+```powershell
+claude mcp add amdl -s user -- docker run -i --rm -v C:\amdl-data:/data `
+  -e AMDL_LITE_SERVER=http://host.docker.internal:12340 --add-host host.docker.internal:host-gateway `
+  ghcr.io/wky050129/apple-music-downloader:latest mcp
+```
+
+- With this repository's `compose.yaml`, which sets the same variables:
+  `claude mcp add amdl -s user -- docker compose -f <repo>\compose.yaml run --rm -T amdl mcp`.
+- If wrapper-lite runs from `mcp/wrapper-lite/compose.yaml`, the container can join its network instead:
+  `--network wrapper-lite_default -e AMDL_LITE_SERVER=http://wrapper-lite:12340`.
+- `wrapper_start` does not work in the container: start wrapper-lite on the host.
+- `foobar_library` reads a foobar2000 profile mounted at `/foobar` and a music folder mounted at `/music`.
+
 ## Configuration
 
-Environment variables (`claude mcp add ... -e NAME=value`); the defaults fit this repository's layout:
+Environment variables (`claude mcp add ... -e NAME=value`). The defaults fit this repository's layout and the
+release zip. The Docker image sets its own defaults: `/data`, `/foobar` and `/music`.
 
 | Variable | Default | |
 |---|---|---|
@@ -90,6 +122,7 @@ Environment variables (`claude mcp add ... -e NAME=value`); the defaults fit thi
 | `AMDL_MCP_STATE` | `mcp\state\` | job logs, quarantine, cached web token |
 | `AMDL_DIRECT_HOSTS` | `aod.itunes.apple.com,mzstatic.com` | hosts amdl reaches without the proxy |
 | `AMDL_AUTO_RETRY` | `2` | extra runs for failed / truncated / missing tracks |
+| `AMDL_LITE_SERVER` | unset | wrapper-lite address; overrides `lite-server` in `config.yaml` (used by the Docker image) |
 
 ## wrapper-lite login
 

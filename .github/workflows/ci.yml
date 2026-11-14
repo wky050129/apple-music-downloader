@@ -55,3 +55,25 @@ jobs:
         run: |
           docker run --rm amdl:ci --version
           docker run --rm --entrypoint ffmpeg amdl:ci -version | head -n 1
+          docker run --rm --entrypoint /opt/mcp/.venv/bin/python amdl:ci -c "import sys; sys.path.insert(0, '/opt/mcp'); import server; print('mcp server imports')"
+
+  mcp:
+    name: MCP server
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcp
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.11.18'
+
+      - name: Install and import
+        run: |
+          uv sync --frozen
+          uv run --frozen python -c "import server; print('mcp server imports')"

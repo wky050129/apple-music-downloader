@@ -5,7 +5,12 @@
 > **About this fork:** this is a fork of [zhaarey/apple-music-downloader](https://github.com/zhaarey/apple-music-downloader).
 > It adds an MCP server for Claude Code in [`mcp/`](./mcp/README.md): Apple Music search, queued downloads checked
 > against the catalog durations with automatic retries, and foobar2000 library lookup. The downloader below is the
-> original author's code, unchanged (upstream v0.1.4).
+> original author's code, unchanged.
+>
+> This fork's Releases and Docker image (`ghcr.io/wky050129/apple-music-downloader`) follow upstream: upstream is
+> merged once a day, and each upstream version is released here with the MCP server added. The releases contain
+> `amdl_windows_amd64_mcp.zip` (amdl.exe + MCP) and `amdl_mcp.zip`, and the image runs the MCP server with the
+> `mcp` command. Binaries built here update themselves from this fork's releases.
 
 > **Original script by Sorrow.** Modified with fixes and improvements.
 

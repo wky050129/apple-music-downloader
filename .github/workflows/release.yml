@@ -139,6 +139,18 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      - name: Bundle the MCP server
+        # amdl_mcp.zip: the mcp/ folder only, to unpack next to any amdl binary.
+        # amdl_windows_amd64_mcp.zip: amdl.exe + config.yaml.example + mcp/, ready to use on Windows.
+        run: |
+          git archive --format=zip --prefix=mcp/ -o release-assets/amdl_mcp.zip HEAD:mcp
+          mkdir -p bundle/amdl
+          cp release-assets/amdl_windows_amd64.exe bundle/amdl/amdl.exe
+          cp config.yaml.example bundle/amdl/
+          git archive --format=tar --prefix=mcp/ HEAD:mcp | tar -x -C bundle/amdl
+          (cd bundle && zip -qr ../release-assets/amdl_windows_amd64_mcp.zip amdl)
+          unzip -l release-assets/amdl_windows_amd64_mcp.zip
+
       - name: Generate Checksums
         working-directory: release-assets
         run: |
@@ -153,6 +165,13 @@ jobs:
           tag_name: ${{ needs.check.outputs.tag }}
           target_commitish: ${{ github.sha }}
           files: release-assets/*
+          body: |
+            The amdl binaries of [zhaarey/apple-music-downloader ${{ needs.check.outputs.tag }}](https://github.com/zhaarey/apple-music-downloader/releases/tag/${{ needs.check.outputs.tag }}), built from this fork, plus the MCP server for Claude Code ([`mcp/`](https://github.com/${{ github.repository }}/tree/${{ needs.check.outputs.tag }}/mcp)):
+
+            - `amdl_windows_amd64_mcp.zip`: `amdl.exe` + `config.yaml.example` + `mcp/`, ready to use on Windows
+            - `amdl_mcp.zip`: only the `mcp/` folder, to unpack next to an amdl binary
+            - Docker: `ghcr.io/${{ github.repository }}` (tag `latest` or the version without the `v`); the `mcp` command runs the MCP server
+
           generate_release_notes: true
           draft: false
           prerelease: ${{ needs.check.outputs.prerelease == 'true' }}

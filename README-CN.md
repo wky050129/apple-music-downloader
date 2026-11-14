@@ -4,7 +4,11 @@
 
 > **关于这个 fork：** 本仓库 fork 自原作者的 [zhaarey/apple-music-downloader](https://github.com/zhaarey/apple-music-downloader)。
 > 新增的 [`mcp/`](./mcp/README-CN.md) 目录是一个 Claude Code 用的 MCP 服务器，可以搜索 Apple Music、排队下载（下完自动对照
-> 曲库时长核对，有问题自动重试），还能查询 foobar2000 曲库。下面的下载器是原作者的代码，没有改动（上游 v0.1.4）。
+> 曲库时长核对，有问题自动重试），还能查询 foobar2000 曲库。下面的下载器是原作者的代码，没有改动。
+>
+> 本 fork 的 Releases 和 Docker 镜像（`ghcr.io/wky050129/apple-music-downloader`）跟随上游：每天合并一次上游，上游每出一个版本，
+> 这里就会发布同一版本号、加上 MCP 的版本。Release 里有 `amdl_windows_amd64_mcp.zip`（amdl.exe + MCP）和 `amdl_mcp.zip`，
+> 镜像用 `mcp` 命令启动 MCP 服务器。从这里下载的 amdl 自更新时，也会从本 fork 的 Releases 获取新版本。
 
 > **原脚本由 Sorrow 编写。** 本仓库已修改并包含修复与改进。
 

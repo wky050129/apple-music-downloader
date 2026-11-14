@@ -45,6 +45,11 @@ DOCKER_DESKTOP_EXE = Path(os.environ.get("DOCKER_DESKTOP_EXE", r"C:\Program File
 FOOBAR_PROFILE = Path(os.environ.get("FOOBAR_PROFILE", str(Path(os.environ.get("APPDATA", Path.home())) / "foobar2000-v2")))
 MUSIC_ROOT = Path(os.environ.get("MUSIC_ROOT", str(Path.home() / "Music")))
 STATE_DIR = Path(os.environ.get("AMDL_MCP_STATE", str(HERE / "state")))
+# Docker image mode (`docker run -i ... mcp`, set by the image): wrapper-lite runs outside the container,
+# so the MCP does not try to start it, and its address comes from AMDL_LITE_SERVER (as for amdl in the
+# image), because 127.0.0.1 in config.yaml would be the container itself.
+IN_CONTAINER = os.environ.get("AMDL_MCP_CONTAINER") == "1"
+LITE_SERVER_ENV = os.environ.get("AMDL_LITE_SERVER", "").strip().rstrip("/")
 JOBS_DIR = STATE_DIR / "jobs"
 # Hosts amdl reaches without the HTTPS_PROXY inherited from Claude Code. Behind a proxy the
 # audio CDN can crawl (~30 kB/s, with stream resets) while a direct connection reaches a
@@ -158,6 +163,8 @@ def _save_folders() -> dict[str, str | None]:
 
 
 def _lite_server() -> str:
+    if LITE_SERVER_ENV:
+        return LITE_SERVER_ENV
     m = re.search(r'^\s*lite-server:\s*"?([^"\s#]+)"?', _amdl_config_text(), re.M)
     return (m.group(1) if m else "http://127.0.0.1:12340").rstrip("/")
 
@@ -353,8 +360,10 @@ def amdl_status() -> dict[str, Any]:
         "save_folders": paths,
         "ready": AMDL_EXE.exists() and lite.get("reachable", False) and bool(lite.get("regions")),
     }
-    if engine and state == "running" and lite.get("reachable") and not lite.get("regions"):
+    if lite.get("reachable") and not lite.get("regions"):
         out["hint"] = LOGIN_HELP
+    elif not out["ready"] and IN_CONTAINER:
+        out["hint"] = f"Start wrapper-lite on the host; this container reaches it at {_lite_server()} (AMDL_LITE_SERVER)."
     elif not out["ready"]:
         out["hint"] = "Call wrapper_start to start Docker Desktop and the wrapper-lite container."
     return out
@@ -364,6 +373,9 @@ def amdl_status() -> dict[str, Any]:
 def wrapper_start() -> dict[str, Any]:
     """Start Docker Desktop if needed, then `docker compose up -d` the wrapper-lite container and wait for
     its /status. Does not log in; if the account login is missing it returns re-login instructions."""
+    if IN_CONTAINER:
+        return {"ok": False, "error": "running in the amdl Docker image: start wrapper-lite on the host "
+                f"(`docker compose up -d` in its folder); this container reaches it at {_lite_server()}"}
     steps: list[str] = []
     if not _docker_engine_up():
         if not DOCKER_DESKTOP_EXE.exists():
@@ -486,6 +498,8 @@ def _mcp_config() -> Path:
         text = re.sub(r"^(\s*)exit-on-error:.*$", r"\1exit-on-error: true", text, count=1, flags=re.M)
     else:
         text = re.sub(r"^general:\s*$", "general:\n  exit-on-error: true", text, count=1, flags=re.M)
+    if LITE_SERVER_ENV:
+        text = re.sub(r"^(\s*)lite-server:.*$", lambda m: f'{m.group(1)}lite-server: "{LITE_SERVER_ENV}"', text, count=1, flags=re.M)
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     p = STATE_DIR / "amdl-mcp.yaml"
     p.write_text(text, encoding="utf-8")
