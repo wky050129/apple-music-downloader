@@ -1,6 +1,10 @@
 # Apple Music ALAC / 杜比全景声下载器
 
-[English](./README.md) | [简体中文](./README-CN.md) | [云服务器 / 代理配置](./PROXY-SETUP.md)
+[English](./README.md) | [简体中文](./README-CN.md) | [云服务器 / 代理配置](./PROXY-SETUP.md) | [Claude Code MCP 服务器](./mcp/README-CN.md)
+
+> **关于这个 fork：** 本仓库 fork 自原作者的 [zhaarey/apple-music-downloader](https://github.com/zhaarey/apple-music-downloader)。
+> 新增的 [`mcp/`](./mcp/README-CN.md) 目录是一个 Claude Code 用的 MCP 服务器，可以搜索 Apple Music、排队下载（下完自动对照
+> 曲库时长核对，有问题自动重试），还能查询 foobar2000 曲库。下面的下载器是原作者的代码，没有改动（上游 v0.1.4）。
 
 > **原脚本由 Sorrow 编写。** 本仓库已修改并包含修复与改进。
 

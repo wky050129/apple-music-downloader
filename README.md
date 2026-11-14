@@ -1,6 +1,11 @@
 # Apple Music ALAC / Dolby Atmos Downloader
 
-[English](./README.md) | [简体中文](./README-CN.md) | [Cloud Server / Proxy Setup](./PROXY-SETUP.md)
+[English](./README.md) | [简体中文](./README-CN.md) | [Cloud Server / Proxy Setup](./PROXY-SETUP.md) | [MCP server for Claude Code](./mcp/README.md)
+
+> **About this fork:** this is a fork of [zhaarey/apple-music-downloader](https://github.com/zhaarey/apple-music-downloader).
+> It adds an MCP server for Claude Code in [`mcp/`](./mcp/README.md): Apple Music search, queued downloads checked
+> against the catalog durations with automatic retries, and foobar2000 library lookup. The downloader below is the
+> original author's code, unchanged (upstream v0.1.4).
 
 > **Original script by Sorrow.** Modified with fixes and improvements.
 

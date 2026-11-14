@@ -1,0 +1,48 @@
+# wrapper-lite (decryption backend for amdl); used by the amdl MCP server's wrapper_start tool
+#
+# First time only - log in (tokens are cached in the wrapper-data volume):
+#   1. Put AM_USERNAME / AM_PASSWORD in .env
+#   2. docker compose run --rm login
+#      When it logs "Enter your 2FA code", write the 6-digit code from another window:
+#        docker exec wrapper-lite-login sh -c "printf %s 123456 > /app/rootfs/data/2fa.txt"
+#   3. Clear AM_PASSWORD in .env (the service below never reads it)
+#
+# Run the service:  docker compose up -d   ->  http://127.0.0.1:12340
+# Logs:             docker compose logs -f
+# Stop:             docker compose down     (keeps the login; `down -v` deletes it)
+#
+# Both services call the launcher directly instead of the image's entrypoint.sh:
+# that script looks for the token database at a path the current lite build no
+# longer writes to (it now lives in /data/mpl_db), so it would log in again,
+# and ask for a 2FA code, on every container start.
+
+services:
+  wrapper-lite:
+    image: ghcr.io/worldobservationlog/wrapper-lite:latest
+    container_name: wrapper-lite
+    entrypoint: ["/app/wrapper-lite-rootless", "--base-dir", "/data", "--host", "0.0.0.0", "--port", "12340"]
+    ports:
+      - "127.0.0.1:12340:12340"   # the API has no authentication: reachable from this PC only
+    volumes:
+      - wrapper-data:/app/rootfs/data
+    security_opt:
+      - seccomp:unconfined        # the launcher needs unshare(CLONE_NEWUSER); same as upstream compose.yaml
+    restart: unless-stopped
+
+  login:
+    image: ghcr.io/worldobservationlog/wrapper-lite:latest
+    container_name: wrapper-lite-login
+    profiles: ["login"]
+    entrypoint: ["/bin/sh", "-c", 'exec /app/wrapper-lite-rootless --login "$$AM_USERNAME:$$AM_PASSWORD" --code-from-file --base-dir /data']
+    # Not USERNAME/PASSWORD: Windows always defines USERNAME, and compose prefers
+    # the shell's value over .env, so the Windows login name would be sent instead.
+    environment:
+      AM_USERNAME: ${AM_USERNAME:-}
+      AM_PASSWORD: ${AM_PASSWORD:-}
+    volumes:
+      - wrapper-data:/app/rootfs/data
+    security_opt:
+      - seccomp:unconfined
+
+volumes:
+  wrapper-data:

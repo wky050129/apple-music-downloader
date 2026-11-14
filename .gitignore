@@ -23,3 +23,9 @@
 !/internal/**
 !/cmd/
 !/cmd/**
+!/mcp/
+!/mcp/**
+/mcp/.venv/
+/mcp/state/
+/mcp/**/__pycache__/
+/mcp/wrapper-lite/.env
